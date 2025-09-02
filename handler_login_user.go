@@ -6,13 +6,20 @@ import (
 	"time"
 
 	"github.com/Mayank3299/Go-Server/internal/auth"
+	"github.com/Mayank3299/Go-Server/internal/database"
+	"github.com/google/uuid"
 )
 
 func (ac *apiConfig) handlerLoginUser(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Email            string `json:"email"`
-		Password         string `json:"password"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	type response struct {
+		User
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	params := parameters{}
@@ -35,21 +42,37 @@ func (ac *apiConfig) handlerLoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expiresIn := time.Hour
-	if params.ExpiresInSeconds > 0 && params.ExpiresInSeconds < 3600 {
-		expiresIn = time.Duration(params.ExpiresInSeconds) * time.Second
-	}
-
-	userToken, err := auth.MakeJWT(user.ID, ac.secret, expiresIn)
+	accessToken, err := auth.MakeJWT(user.ID, ac.secret)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't make JWT", err)
+		return
 	}
 
-	respondWithJSON(w, http.StatusOK, User{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
-		Token:     userToken,
-	})
+	refreshTokenString, err := auth.MakeRefreshToken()
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't make refresh token string", err)
+		return
+	}
+	expiresAt := time.Now().UTC().Add(60 * 24 * time.Hour)
+
+	queryParams := database.CreateRefreshTokenParams{
+		Token:     refreshTokenString,
+		UserID:    uuid.NullUUID{UUID: user.ID, Valid: true},
+		ExpiresAt: expiresAt,
+	}
+	refreshToken, err := ac.db.CreateRefreshToken(r.Context(), queryParams)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't make refresh token", err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, response{
+		User: User{
+			ID:        user.ID,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+			Email:     user.Email,
+		},
+		Token:        accessToken,
+		RefreshToken: refreshToken.Token})
 }
