@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Mayank3299/Go-Server/internal/auth"
 	"github.com/Mayank3299/Go-Server/internal/database"
 	"github.com/google/uuid"
 )
@@ -29,9 +30,21 @@ func (ac *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) 
 		Chirp
 	}
 
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
+		return
+	}
+
+	userId, err := auth.ValidateJWT(tokenString, ac.secret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid token", err)
+		return
+	}
+
 	params := paramters{}
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
 		return
@@ -45,7 +58,7 @@ func (ac *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) 
 
 	queryParams := database.CreateChirpParams{
 		Body:   cleanedBody,
-		UserID: uuid.NullUUID{UUID: params.UserID, Valid: true},
+		UserID: uuid.NullUUID{UUID: userId, Valid: true},
 	}
 	chirp, err := ac.db.CreateChirp(r.Context(), queryParams)
 	if err != nil {

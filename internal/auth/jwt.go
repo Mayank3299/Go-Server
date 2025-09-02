@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -67,4 +69,19 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	}
 
 	return uuid.Nil, fmt.Errorf("invalid token claims")
+}
+
+func GetBearerToken(headers http.Header) (string, error) {
+	authorizationHeader := headers.Get("Authorization")
+	if authorizationHeader == "" {
+		return "", fmt.Errorf("please provide authorization token")
+	}
+
+	parts := strings.Split(authorizationHeader, " ")
+	if len(parts) != 2 {
+		return "", errors.New("invalid authorization header")
+	}
+
+	tokenString := parts[len(parts)-1]
+	return tokenString, nil
 }
