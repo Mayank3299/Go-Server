@@ -81,6 +81,13 @@ The server exposes RESTful endpoints for user and chirp management. Use tools li
 ### Chirps
 - `POST /chirps` - Create a chirp
 - `GET /chirps` - List chirps
+	- Optional query parameters:
+		- `author_id`: Filter chirps by author
+		- `sort`: Sort chirps by creation time (`asc` or `desc`)
+	- Examples:
+		- `GET http://localhost:8080/api/chirps?sort=asc`
+		- `GET http://localhost:8080/api/chirps?sort=desc`
+		- `GET http://localhost:8080/api/chirps?author_id=<id>&sort=asc`
 - `GET /chirps/{chirpID}` - Get chirp by ID
 - `DELETE /chirps/{chirpID}` - Delete chirp
 
