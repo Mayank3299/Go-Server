@@ -78,7 +78,22 @@ func GetBearerToken(headers http.Header) (string, error) {
 	}
 
 	parts := strings.Split(authorizationHeader, " ")
-	if len(parts) != 2 {
+	if parts[0] != "Bearer" || len(parts) != 2 {
+		return "", errors.New("invalid authorization header")
+	}
+
+	tokenString := parts[len(parts)-1]
+	return tokenString, nil
+}
+
+func GetAPIKey(headers http.Header) (string, error) {
+	authorizationHeader := headers.Get("Authorization")
+	if authorizationHeader == "" {
+		return "", fmt.Errorf("please provide authorization token")
+	}
+
+	parts := strings.Split(authorizationHeader, " ")
+	if parts[0] != "ApiKey" || len(parts) != 2 {
 		return "", errors.New("invalid authorization header")
 	}
 
