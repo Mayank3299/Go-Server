@@ -1,4 +1,3 @@
-[No content]
 # Go Server
 
 A RESTful server built with Go for managing users and chirps (short messages), featuring authentication, metrics, and readiness endpoints.
